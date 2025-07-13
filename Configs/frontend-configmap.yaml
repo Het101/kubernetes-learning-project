@@ -1,0 +1,145 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-code
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Task Manager - Kubernetes Learning</title>
+        <style>
+            body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+            .task { padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+            .task.completed { background-color: #f0f8f0; text-decoration: line-through; }
+            button { margin: 5px; padding: 5px 10px; cursor: pointer; }
+            input[type="text"] { width: 300px; padding: 5px; margin: 5px; }
+            .status { background: #e8f5e8; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        </style>
+    </head>
+    <body>
+        <h1>🚀 Kubernetes Task Manager</h1>
+        <div class="status">
+            <p><strong>Phase 1:</strong> Learning Deployments, Services, ConfigMaps & Probes</p>
+            <p><strong>Backend API:</strong> <span id="api-status">Checking...</span></p>
+        </div>
+        
+        <div>
+            <input type="text" id="new-task" placeholder="Enter new task...">
+            <button onclick="addTask()">Add Task</button>
+        </div>
+        
+        <div id="tasks"></div>
+        
+        <script>
+            const API_URL = 'http://task-api-service';
+            
+            async function checkApiHealth() {
+                try {
+                    const response = await fetch('/api/health');
+                    const data = await response.json();
+                    document.getElementById('api-status').textContent = 
+                        `✅ Healthy (${data.timestamp})`;
+                } catch (error) {
+                    document.getElementById('api-status').textContent = 
+                        `❌ Error: ${error.message}`;
+                }
+            }
+            
+            async function loadTasks() {
+                try {
+                    const response = await fetch('/api/tasks');
+                    const tasks = await response.json();
+                    displayTasks(tasks);
+                } catch (error) {
+                    console.error('Error loading tasks:', error);
+                }
+            }
+            
+            function displayTasks(tasks) {
+                const tasksDiv = document.getElementById('tasks');
+                tasksDiv.innerHTML = tasks.map(task => `
+                    <div class="task ${task.completed ? 'completed' : ''}">
+                        <span>${task.title}</span>
+                        <button onclick="toggleTask(${task.id})">
+                            ${task.completed ? 'Undo' : 'Complete'}
+                        </button>
+                        <button onclick="deleteTask(${task.id})">Delete</button>
+                    </div>
+                `).join('');
+            }
+            
+            async function addTask() {
+                const title = document.getElementById('new-task').value;
+                if (!title) return;
+                
+                try {
+                    await fetch('/api/tasks', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title })
+                    });
+                    document.getElementById('new-task').value = '';
+                    loadTasks();
+                } catch (error) {
+                    console.error('Error adding task:', error);
+                }
+            }
+            
+            async function toggleTask(id) {
+                try {
+                    await fetch(`/api/tasks/${id}`, { method: 'PUT' });
+                    loadTasks();
+                } catch (error) {
+                    console.error('Error toggling task:', error);
+                }
+            }
+            
+            async function deleteTask(id) {
+                try {
+                    await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+                    loadTasks();
+                } catch (error) {
+                    console.error('Error deleting task:', error);
+                }
+            }
+            
+            // Initialize
+            checkApiHealth();
+            loadTasks();
+            setInterval(checkApiHealth, 30000); // Check every 30 seconds
+        </script>
+    </body>
+    </html>
+  nginx.conf: |
+    events {
+        worker_connections 1024;
+    }
+    
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+        
+        server {
+            listen 80;
+            server_name localhost;
+            
+            # Serve static files
+            location / {
+                root /usr/share/nginx/html;
+                index index.html;
+                try_files $uri $uri/ /index.html;
+            }
+            
+            # Proxy API requests to backend
+            location /api/ {
+                proxy_pass http://task-api-service;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+        }
+    }

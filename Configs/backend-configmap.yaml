@@ -1,0 +1,72 @@
+# backend-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-code
+data:
+  server.js: |
+    const express = require('express');
+    const cors = require('cors');
+    const app = express();
+    const PORT = process.env.PORT || 3000;
+
+    // Middleware
+    app.use(cors());
+    app.use(express.json());
+
+    // In-memory storage (for Phase 1)
+    let tasks = [
+      { id: 1, title: 'Learn Kubernetes Deployments', completed: false },
+      { id: 2, title: 'Create Services', completed: false },
+      { id: 3, title: 'Configure ConfigMaps', completed: true }
+    ];
+
+    // Routes
+    app.get('/api/health', (req, res) => {
+      res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+    });
+
+    app.get('/api/tasks', (req, res) => {
+      res.json(tasks);
+    });
+
+    app.post('/api/tasks', (req, res) => {
+      const { title } = req.body;
+      const newTask = {
+        id: tasks.length + 1,
+        title,
+        completed: false
+      };
+      tasks.push(newTask);
+      res.status(201).json(newTask);
+    });
+
+    app.put('/api/tasks/:id', (req, res) => {
+      const id = parseInt(req.params.id);
+      const task = tasks.find(t => t.id === id);
+      if (!task) return res.status(404).json({ error: 'Task not found' });
+      
+      task.completed = !task.completed;
+      res.json(task);
+    });
+
+    app.delete('/api/tasks/:id', (req, res) => {
+      const id = parseInt(req.params.id);
+      tasks = tasks.filter(t => t.id !== id);
+      res.status(204).send();
+    });
+
+    app.listen(PORT, () => {
+      console.log(`API server running on port ${PORT}`);
+    });
+  package.json: |
+    {
+      "name": "task-api",
+      "version": "1.0.0",
+      "description": "Simple task management API",
+      "main": "server.js",
+      "dependencies": {
+        "express": "^4.18.2",
+        "cors": "^2.8.5"
+      }
+    }
