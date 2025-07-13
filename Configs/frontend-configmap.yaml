@@ -9,107 +9,722 @@ data:
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Task Manager - Kubernetes Learning</title>
+        <title>Kubernetes Task Manager</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <style>
-            body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-            .task { padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
-            .task.completed { background-color: #f0f8f0; text-decoration: line-through; }
-            button { margin: 5px; padding: 5px 10px; cursor: pointer; }
-            input[type="text"] { width: 300px; padding: 5px; margin: 5px; }
-            .status { background: #e8f5e8; padding: 10px; margin: 10px 0; border-radius: 5px; }
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            :root {
+                --primary: #667eea;
+                --primary-dark: #5a67d8;
+                --secondary: #764ba2;
+                --success: #48bb78;
+                --warning: #ed8936;
+                --error: #f56565;
+                --background: #0f0f23;
+                --surface: #1a1a2e;
+                --surface-light: #16213e;
+                --text: #e2e8f0;
+                --text-secondary: #a0aec0;
+                --border: #2d3748;
+                --shadow: rgba(0, 0, 0, 0.3);
+                --gradient: linear-gradient(135deg, var(--primary), var(--secondary));
+            }
+            
+            body {
+                font-family: 'Inter', sans-serif;
+                background: var(--background);
+                color: var(--text);
+                line-height: 1.6;
+                min-height: 100vh;
+                background-image: 
+                    radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.1) 0%, transparent 50%);
+            }
+            
+            .container {
+                max-width: 900px;
+                margin: 0 auto;
+                padding: 2rem;
+            }
+            
+            .header {
+                text-align: center;
+                margin-bottom: 3rem;
+                position: relative;
+            }
+            
+            .header::before {
+                content: '';
+                position: absolute;
+                top: -50px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 100px;
+                height: 100px;
+                background: var(--gradient);
+                border-radius: 50%;
+                opacity: 0.1;
+                animation: pulse 2s infinite;
+            }
+            
+            .title {
+                font-size: 3rem;
+                font-weight: 700;
+                background: var(--gradient);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                margin-bottom: 0.5rem;
+                animation: slideDown 0.8s ease-out;
+            }
+            
+            .subtitle {
+                color: var(--text-secondary);
+                font-size: 1.1rem;
+                font-weight: 400;
+                animation: slideDown 0.8s ease-out 0.2s both;
+            }
+            
+            .status-card {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 1rem;
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+                backdrop-filter: blur(10px);
+                box-shadow: 0 4px 20px var(--shadow);
+                animation: slideUp 0.6s ease-out 0.4s both;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .status-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 2px;
+                background: var(--gradient);
+            }
+            
+            .status-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 0.5rem;
+            }
+            
+            .status-row:last-child {
+                margin-bottom: 0;
+            }
+            
+            .status-label {
+                font-weight: 500;
+                color: var(--text-secondary);
+            }
+            
+            .status-value {
+                font-weight: 600;
+                padding: 0.25rem 0.75rem;
+                border-radius: 0.5rem;
+                font-size: 0.9rem;
+            }
+            
+            .status-healthy {
+                background: rgba(72, 187, 120, 0.2);
+                color: var(--success);
+            }
+            
+            .status-error {
+                background: rgba(245, 101, 101, 0.2);
+                color: var(--error);
+            }
+            
+            .add-task-section {
+                background: var(--surface-light);
+                border: 1px solid var(--border);
+                border-radius: 1rem;
+                padding: 2rem;
+                margin-bottom: 2rem;
+                box-shadow: 0 2px 15px var(--shadow);
+                animation: slideUp 0.6s ease-out 0.6s both;
+            }
+            
+            .input-group {
+                display: flex;
+                gap: 1rem;
+                align-items: center;
+            }
+            
+            .task-input {
+                flex: 1;
+                padding: 0.875rem 1rem;
+                border: 1px solid var(--border);
+                border-radius: 0.75rem;
+                background: var(--surface);
+                color: var(--text);
+                font-size: 1rem;
+                transition: all 0.3s ease;
+                outline: none;
+            }
+            
+            .task-input:focus {
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                transform: translateY(-1px);
+            }
+            
+            .task-input::placeholder {
+                color: var(--text-secondary);
+            }
+            
+            .btn {
+                padding: 0.875rem 1.5rem;
+                border: none;
+                border-radius: 0.75rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-size: 0.9rem;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .btn::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+                transition: left 0.5s;
+            }
+            
+            .btn:hover::before {
+                left: 100%;
+            }
+            
+            .btn-primary {
+                background: var(--gradient);
+                color: white;
+            }
+            
+            .btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
+            }
+            
+            .btn-secondary {
+                background: rgba(160, 174, 192, 0.1);
+                color: var(--text-secondary);
+                border: 1px solid var(--border);
+            }
+            
+            .btn-secondary:hover {
+                background: rgba(160, 174, 192, 0.2);
+                color: var(--text);
+                transform: translateY(-1px);
+            }
+            
+            .btn-success {
+                background: rgba(72, 187, 120, 0.2);
+                color: var(--success);
+                border: 1px solid rgba(72, 187, 120, 0.3);
+            }
+            
+            .btn-success:hover {
+                background: rgba(72, 187, 120, 0.3);
+                transform: translateY(-1px);
+            }
+            
+            .btn-danger {
+                background: rgba(245, 101, 101, 0.2);
+                color: var(--error);
+                border: 1px solid rgba(245, 101, 101, 0.3);
+            }
+            
+            .btn-danger:hover {
+                background: rgba(245, 101, 101, 0.3);
+                transform: translateY(-1px);
+            }
+            
+            .btn-small {
+                padding: 0.5rem 1rem;
+                font-size: 0.8rem;
+            }
+            
+            .tasks-container {
+                animation: slideUp 0.6s ease-out 0.8s both;
+            }
+            
+            .tasks-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 1rem;
+            }
+            
+            .tasks-title {
+                font-size: 1.5rem;
+                font-weight: 600;
+                color: var(--text);
+            }
+            
+            .tasks-count {
+                color: var(--text-secondary);
+                font-size: 0.9rem;
+            }
+            
+            .task-item {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 1rem;
+                padding: 1.5rem;
+                margin-bottom: 1rem;
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+                animation: taskSlideIn 0.4s ease-out;
+            }
+            
+            .task-item:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 25px var(--shadow);
+                border-color: var(--primary);
+            }
+            
+            .task-item.completed {
+                background: rgba(72, 187, 120, 0.05);
+                border-color: rgba(72, 187, 120, 0.2);
+            }
+            
+            .task-item.completed::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 2px;
+                background: var(--success);
+            }
+            
+            .task-content {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 1rem;
+            }
+            
+            .task-text {
+                flex: 1;
+                font-size: 1.1rem;
+                font-weight: 500;
+                transition: all 0.3s ease;
+            }
+            
+            .task-item.completed .task-text {
+                color: var(--text-secondary);
+                text-decoration: line-through;
+                opacity: 0.7;
+            }
+            
+            .task-actions {
+                display: flex;
+                gap: 0.5rem;
+                opacity: 0.7;
+                transition: opacity 0.3s ease;
+            }
+            
+            .task-item:hover .task-actions {
+                opacity: 1;
+            }
+            
+            .empty-state {
+                text-align: center;
+                padding: 3rem;
+                color: var(--text-secondary);
+            }
+            
+            .empty-state-icon {
+                font-size: 3rem;
+                margin-bottom: 1rem;
+                opacity: 0.5;
+            }
+            
+            .error-message {
+                background: rgba(245, 101, 101, 0.1);
+                border: 1px solid rgba(245, 101, 101, 0.3);
+                border-radius: 0.75rem;
+                padding: 1rem;
+                margin-bottom: 1rem;
+                color: var(--error);
+                animation: shake 0.5s ease-in-out;
+            }
+            
+            .loading {
+                display: inline-block;
+                width: 1rem;
+                height: 1rem;
+                border: 2px solid var(--border);
+                border-top: 2px solid var(--primary);
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+            
+            @keyframes pulse {
+                0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.1; }
+                50% { transform: translateX(-50%) scale(1.1); opacity: 0.2; }
+            }
+            
+            @keyframes slideDown {
+                from { transform: translateY(-30px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+            
+            @keyframes slideUp {
+                from { transform: translateY(30px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+            
+            @keyframes taskSlideIn {
+                from { transform: translateX(-20px); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                75% { transform: translateX(5px); }
+            }
+            
+            @media (max-width: 768px) {
+                .container {
+                    padding: 1rem;
+                }
+                
+                .title {
+                    font-size: 2rem;
+                }
+                
+                .input-group {
+                    flex-direction: column;
+                    gap: 0.75rem;
+                }
+                
+                .task-input {
+                    width: 100%;
+                }
+                
+                .task-content {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 1rem;
+                }
+                
+                .task-actions {
+                    align-self: flex-end;
+                }
+            }
         </style>
     </head>
     <body>
-        <h1>🚀 Kubernetes Task Manager</h1>
-        <div class="status">
-            <p><strong>Phase 1:</strong> Learning Deployments, Services, ConfigMaps & Probes</p>
-            <p><strong>Backend API:</strong> <span id="api-status">Checking...</span></p>
+        <div class="container">
+            <header class="header">
+                <h1 class="title">⚡ Kubernetes Task Manager</h1>
+                <p class="subtitle">Learning Deployments, Services, ConfigMaps & Probes</p>
+            </header>
+            
+            <div class="status-card">
+                <div class="status-row">
+                    <span class="status-label">Backend API Status</span>
+                    <span id="api-status" class="status-value">
+                        <span class="loading"></span> Checking...
+                    </span>
+                </div>
+                <div class="status-row">
+                    <span class="status-label">Learning Phase</span>
+                    <span class="status-value status-healthy">Phase 1: Core Concepts</span>
+                </div>
+            </div>
+            
+            <div class="add-task-section">
+                <div class="input-group">
+                    <input type="text" id="new-task" class="task-input" placeholder="What needs to be done?" />
+                    <button onclick="addTask()" class="btn btn-primary">
+                        <span id="add-btn-text">Add Task</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="tasks-container">
+                <div class="tasks-header">
+                    <h2 class="tasks-title">Your Tasks</h2>
+                    <span id="tasks-count" class="tasks-count">0 tasks</span>
+                </div>
+                <div id="tasks"></div>
+            </div>
         </div>
-        
-        <div>
-            <input type="text" id="new-task" placeholder="Enter new task...">
-            <button onclick="addTask()">Add Task</button>
-        </div>
-        
-        <div id="tasks"></div>
         
         <script>
-            const API_URL = 'http://task-api-service';
+            // Use relative paths - nginx will proxy to backend
+            const API_BASE = '/api';
+            let tasks = [];
+            let isLoading = false;
             
             async function checkApiHealth() {
                 try {
-                    const response = await fetch('/api/health');
+                    const response = await fetch(`${API_BASE}/health`);
                     const data = await response.json();
-                    document.getElementById('api-status').textContent = 
-                        `✅ Healthy (${data.timestamp})`;
+                    const statusElement = document.getElementById('api-status');
+                    
+                    if (data.status === 'healthy') {
+                        statusElement.innerHTML = '✅ Healthy';
+                        statusElement.className = 'status-value status-healthy';
+                    } else {
+                        statusElement.innerHTML = '⚠️ Unhealthy';
+                        statusElement.className = 'status-value status-error';
+                    }
                 } catch (error) {
-                    document.getElementById('api-status').textContent = 
-                        `❌ Error: ${error.message}`;
+                    const statusElement = document.getElementById('api-status');
+                    statusElement.innerHTML = '❌ Disconnected';
+                    statusElement.className = 'status-value status-error';
                 }
             }
             
             async function loadTasks() {
                 try {
-                    const response = await fetch('/api/tasks');
-                    const tasks = await response.json();
+                    const response = await fetch(`${API_BASE}/tasks`);
+                    if (!response.ok) throw new Error('Failed to load tasks');
+                    
+                    tasks = await response.json();
                     displayTasks(tasks);
+                    updateTasksCount();
                 } catch (error) {
                     console.error('Error loading tasks:', error);
+                    showError('Failed to load tasks. Please check your connection.');
                 }
             }
             
-            function displayTasks(tasks) {
+            function displayTasks(taskList) {
                 const tasksDiv = document.getElementById('tasks');
-                tasksDiv.innerHTML = tasks.map(task => `
-                    <div class="task ${task.completed ? 'completed' : ''}">
-                        <span>${task.title}</span>
-                        <button onclick="toggleTask(${task.id})">
-                            ${task.completed ? 'Undo' : 'Complete'}
-                        </button>
-                        <button onclick="deleteTask(${task.id})">Delete</button>
+                
+                if (taskList.length === 0) {
+                    tasksDiv.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📝</div>
+                            <p>No tasks yet. Add your first task above!</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                tasksDiv.innerHTML = taskList.map(task => `
+                    <div class="task-item ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
+                        <div class="task-content">
+                            <span class="task-text">${escapeHtml(task.title)}</span>
+                            <div class="task-actions">
+                                <button onclick="toggleTask(${task.id})" class="btn btn-small ${task.completed ? 'btn-secondary' : 'btn-success'}">
+                                    ${task.completed ? '↺ Undo' : '✓ Complete'}
+                                </button>
+                                <button onclick="deleteTask(${task.id})" class="btn btn-small btn-danger">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 `).join('');
             }
             
+            function updateTasksCount() {
+                const totalTasks = tasks.length;
+                const completedTasks = tasks.filter(task => task.completed).length;
+                const countElement = document.getElementById('tasks-count');
+                
+                if (totalTasks === 0) {
+                    countElement.textContent = 'No tasks';
+                } else {
+                    countElement.textContent = `${totalTasks} task${totalTasks !== 1 ? 's' : ''} (${completedTasks} completed)`;
+                }
+            }
+            
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            function showError(message) {
+                // Remove existing error messages
+                const existingErrors = document.querySelectorAll('.error-message');
+                existingErrors.forEach(error => error.remove());
+                
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = message;
+                
+                const container = document.querySelector('.container');
+                const statusCard = document.querySelector('.status-card');
+                container.insertBefore(errorDiv, statusCard.nextSibling);
+                
+                // Auto-remove after 5 seconds
+                setTimeout(() => {
+                    if (errorDiv.parentNode) {
+                        errorDiv.remove();
+                    }
+                }, 5000);
+            }
+            
+            function showLoading(isAddButton = false) {
+                if (isAddButton) {
+                    const addBtn = document.getElementById('add-btn-text');
+                    addBtn.innerHTML = '<span class="loading"></span> Adding...';
+                }
+                isLoading = true;
+            }
+            
+            function hideLoading(isAddButton = false) {
+                if (isAddButton) {
+                    const addBtn = document.getElementById('add-btn-text');
+                    addBtn.textContent = 'Add Task';
+                }
+                isLoading = false;
+            }
+            
             async function addTask() {
-                const title = document.getElementById('new-task').value;
-                if (!title) return;
+                if (isLoading) return;
+                
+                const titleInput = document.getElementById('new-task');
+                const title = titleInput.value.trim();
+                
+                if (!title) {
+                    titleInput.focus();
+                    return;
+                }
+                
+                showLoading(true);
                 
                 try {
-                    await fetch('/api/tasks', {
+                    const response = await fetch(`${API_BASE}/tasks`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ title })
                     });
-                    document.getElementById('new-task').value = '';
-                    loadTasks();
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to add task');
+                    }
+                    
+                    titleInput.value = '';
+                    await loadTasks();
+                    
+                    // Scroll to the new task
+                    setTimeout(() => {
+                        const newTask = document.querySelector('.task-item:first-child');
+                        if (newTask) {
+                            newTask.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }, 100);
+                    
                 } catch (error) {
                     console.error('Error adding task:', error);
+                    showError(error.message || 'Failed to add task');
+                } finally {
+                    hideLoading(true);
                 }
             }
             
             async function toggleTask(id) {
+                if (isLoading) return;
+                
+                const taskElement = document.querySelector(`[data-task-id="${id}"]`);
+                if (taskElement) {
+                    taskElement.style.opacity = '0.5';
+                }
+                
                 try {
-                    await fetch(`/api/tasks/${id}`, { method: 'PUT' });
-                    loadTasks();
+                    const response = await fetch(`${API_BASE}/tasks/${id}`, { 
+                        method: 'PUT' 
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to update task');
+                    }
+                    
+                    await loadTasks();
+                    
                 } catch (error) {
                     console.error('Error toggling task:', error);
+                    showError(error.message || 'Failed to update task');
+                    
+                    if (taskElement) {
+                        taskElement.style.opacity = '1';
+                    }
                 }
             }
             
             async function deleteTask(id) {
+                if (isLoading) return;
+                
+                const taskElement = document.querySelector(`[data-task-id="${id}"]`);
+                if (taskElement) {
+                    taskElement.style.transform = 'translateX(-100%)';
+                    taskElement.style.opacity = '0';
+                }
+                
                 try {
-                    await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
-                    loadTasks();
+                    const response = await fetch(`${API_BASE}/tasks/${id}`, { 
+                        method: 'DELETE' 
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to delete task');
+                    }
+                    
+                    // Wait for animation to complete
+                    setTimeout(async () => {
+                        await loadTasks();
+                    }, 300);
+                    
                 } catch (error) {
                     console.error('Error deleting task:', error);
+                    showError(error.message || 'Failed to delete task');
+                    
+                    if (taskElement) {
+                        taskElement.style.transform = 'translateX(0)';
+                        taskElement.style.opacity = '1';
+                    }
                 }
             }
+            
+            // Handle Enter key in input
+            document.getElementById('new-task').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addTask();
+                }
+            });
             
             // Initialize
             checkApiHealth();
             loadTasks();
-            setInterval(checkApiHealth, 30000); // Check every 30 seconds
+            
+            // Periodic health checks
+            setInterval(checkApiHealth, 30000);
         </script>
     </body>
     </html>
@@ -122,9 +737,18 @@ data:
         include /etc/nginx/mime.types;
         default_type application/octet-stream;
         
+        # Compression
+        gzip on;
+        gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+        
         server {
             listen 80;
             server_name localhost;
+            
+            # Security headers
+            add_header X-Frame-Options "SAMEORIGIN" always;
+            add_header X-Content-Type-Options "nosniff" always;
+            add_header X-XSS-Protection "1; mode=block" always;
             
             # Serve static files
             location / {
@@ -135,11 +759,34 @@ data:
             
             # Proxy API requests to backend
             location /api/ {
-                proxy_pass http://task-api-service;
+                proxy_pass http://task-api-service/api/;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_set_header X-Forwarded-Proto $scheme;
+                
+                # Handle CORS preflight requests
+                if ($request_method = 'OPTIONS') {
+                    add_header 'Access-Control-Allow-Origin' '*';
+                    add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS';
+                    add_header 'Access-Control-Allow-Headers' 'Content-Type';
+                    add_header 'Access-Control-Max-Age' 1728000;
+                    add_header 'Content-Type' 'text/plain charset=UTF-8';
+                    add_header 'Content-Length' 0;
+                    return 204;
+                }
+            }
+            
+            # Health check endpoint
+            location /health {
+                access_log off;
+                return 200 "healthy\n";
+                add_header Content-Type text/plain;
             }
         }
+<<<<<<< Updated upstream
     }
+=======
+    } }
+    }
+>>>>>>> Stashed changes
