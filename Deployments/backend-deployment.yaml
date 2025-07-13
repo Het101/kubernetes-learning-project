@@ -1,3 +1,4 @@
+# backend-deployment.yaml (Updated)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -26,6 +27,25 @@ spec:
           value: "3000"
         - name: NODE_ENV
           value: "production"
+        - name: DB_HOST
+          value: "postgres"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: database
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: password
         resources:
           requests:
             cpu: "100m"
@@ -37,14 +57,18 @@ spec:
           httpGet:
             path: /api/health
             port: 3000
-          initialDelaySeconds: 60  # Increased to allow npm install
+          initialDelaySeconds: 90  # Increased for npm install + DB connection
           periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /api/health
             port: 3000
-          initialDelaySeconds: 45  # Increased to allow npm install
+          initialDelaySeconds: 75  # Increased for npm install + DB connection
           periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
         volumeMounts:
         - name: app-code
           mountPath: /app
