@@ -784,9 +784,4 @@ data:
                 add_header Content-Type text/plain;
             }
         }
-<<<<<<< Updated upstream
     }
-=======
-    } }
-    }
->>>>>>> Stashed changes
